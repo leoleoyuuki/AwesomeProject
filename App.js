@@ -1,134 +1,95 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, PanResponder, StyleSheet } from 'react-native';
 
-const CalculatorApp = () => {
-  const [displayValue, setDisplayValue] = useState('0');
-  const [prevValue, setPrevValue] = useState(null);
-  const [operator, setOperator] = useState(null);
-  const [clearDisplay, setClearDisplay] = useState(false);
+const SnakeGame = () => {
+  const [snake, setSnake] = useState([{ x: 0, y: 0 }]);
+  const [food, setFood] = useState({ x: 10, y: 10 });
+  const [direction, setDirection] = useState('RIGHT');
+  const [gameOver, setGameOver] = useState(false);
 
-  const handleDigitPress = digit => {
-    if (clearDisplay) {
-      setDisplayValue(String(digit));
-      setClearDisplay(false);
-      return;
-    }
+  const panResponder = PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onPanResponderMove: (event, gestureState) => {
+      const { dx, dy } = gestureState;
 
-    const newValue = displayValue === '0' ? String(digit) : displayValue + digit;
-    setDisplayValue(newValue);
-  };
-
-  const handleOperatorPress = nextOperator => {
-    if (operator !== null) {
-      if (displayValue !== '0') {
-        const result = calculate(parseFloat(prevValue), parseFloat(displayValue), operator);
-        setDisplayValue(String(result));
-        setPrevValue(String(result));
+      if (Math.abs(dx) > Math.abs(dy)) {
+        setDirection(dx > 0 ? 'RIGHT' : 'LEFT');
+      } else {
+        setDirection(dy > 0 ? 'DOWN' : 'UP');
       }
-    } else {
-      setPrevValue(displayValue);
-    }
+    },
+  });
 
-    setClearDisplay(true);
-    setOperator(nextOperator);
+  useEffect(() => {
+    const gameLoop = setInterval(() => {
+      moveSnake();
+      checkCollision();
+    }, 100);
+
+    return () => clearInterval(gameLoop);
+  }, [snake]);
+
+  const moveSnake = () => {
+    if (!gameOver) {
+      const newSnake = [...snake];
+      const head = { ...newSnake[0] };
+
+      switch (direction) {
+        case 'UP':
+          head.y -= 1;
+          break;
+        case 'DOWN':
+          head.y += 1;
+          break;
+        case 'LEFT':
+          head.x -= 1;
+          break;
+        case 'RIGHT':
+          head.x += 1;
+          break;
+      }
+
+      newSnake.unshift(head);
+      if (head.x === food.x && head.y === food.y) {
+        setFood(generateFoodPosition());
+      } else {
+        newSnake.pop();
+      }
+
+      setSnake(newSnake);
+    }
   };
 
-  const handleEqualsPress = () => {
-    if (operator !== null) {
-      const result = calculate(parseFloat(prevValue), parseFloat(displayValue), operator);
-      setDisplayValue(String(result));
-      setPrevValue(null);
-      setOperator(null);
-      setClearDisplay(true);
+  const checkCollision = () => {
+    const head = snake[0];
+
+    if (
+      head.x < 0 || head.y < 0 || head.x >= 20 || head.y >= 20 ||
+      snake.slice(1).some(segment => segment.x === head.x && segment.y === head.y)
+    ) {
+      setGameOver(true);
     }
   };
 
-  const calculate = (value1, value2, operation) => {
-    switch (operation) {
-      case '+':
-        return value1 + value2;
-      case '-':
-        return value1 - value2;
-      case '*':
-        return value1 * value2;
-      case '/':
-        return value1 / value2;
-      default:
-        return null;
-    }
-  };
-
-  const handleClearPress = () => {
-    setDisplayValue('0');
-    setPrevValue(null);
-    setOperator(null);
-    setClearDisplay(false);
+  const generateFoodPosition = () => {
+    const x = Math.floor(Math.random() * 20);
+    const y = Math.floor(Math.random() * 20);
+    return { x, y };
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.display}>{displayValue}</Text>
-      <View style={styles.row}>
-        <TouchableOpacity style={styles.button} onPress={() => handleClearPress()}>
-          <Text style={styles.buttonText}>C</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={() => handleOperatorPress('/')}>
-          <Text style={styles.buttonText}>/</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={() => handleOperatorPress('*')}>
-          <Text style={styles.buttonText}>*</Text>
-        </TouchableOpacity>
+    <View style={styles.container} {...panResponder.panHandlers}>
+      <View style={styles.board}>
+        <View style={styles.leftBorder} />
+        <View style={styles.innerBoard}>
+          {snake.map((segment, index) => (
+            <View key={index} style={[styles.segment, { top: segment.y * 20, left: segment.x * 20 }]} />
+          ))}
+          <View style={[styles.food, { top: food.y * 20, left: food.x * 20 }]} />
+        </View>
+        <View style={styles.rightBorder} />
       </View>
-      <View style={styles.row}>
-        <TouchableOpacity style={styles.button} onPress={() => handleDigitPress(7)}>
-          <Text style={styles.buttonText}>7</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={() => handleDigitPress(8)}>
-          <Text style={styles.buttonText}>8</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={() => handleDigitPress(9)}>
-          <Text style={styles.buttonText}>9</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={() => handleOperatorPress('-')}>
-          <Text style={styles.buttonText}>-</Text>
-        </TouchableOpacity>
-      </View>
-      <View style={styles.row}>
-        <TouchableOpacity style={styles.button} onPress={() => handleDigitPress(4)}>
-          <Text style={styles.buttonText}>4</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={() => handleDigitPress(5)}>
-          <Text style={styles.buttonText}>5</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={() => handleDigitPress(6)}>
-          <Text style={styles.buttonText}>6</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={() => handleOperatorPress('+')}>
-          <Text style={styles.buttonText}>+</Text>
-        </TouchableOpacity>
-      </View>
-      <View style={styles.row}>
-        <TouchableOpacity style={styles.button} onPress={() => handleDigitPress(1)}>
-          <Text style={styles.buttonText}>1</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={() => handleDigitPress(2)}>
-          <Text style={styles.buttonText}>2</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={() => handleDigitPress(3)}>
-          <Text style={styles.buttonText}>3</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={() => handleEqualsPress()}>
-          <Text style={styles.buttonText}>=</Text>
-        </TouchableOpacity>
-      </View>
-      <View style={styles.row}>
-        <TouchableOpacity style={[styles.button, styles.double]} onPress={() => handleDigitPress(0)}>
-          <Text style={styles.buttonText}>0</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={() => handleDigitPress('.')}>
-          <Text style={styles.buttonText}>.</Text>
-        </TouchableOpacity>
-      </View>
+      {gameOver && <Text style={styles.gameOverText}>Game Over!</Text>}
     </View>
   );
 };
@@ -136,34 +97,45 @@ const CalculatorApp = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  board: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    position: 'relative',
+  },
+  leftBorder: {
+    width: 20,
     backgroundColor: '#000',
   },
-  row: {
-    flexDirection: 'row',
+  innerBoard: {
+    width: 400,
+    height: 400,
+    backgroundColor: '#fff',
+    position: 'relative',
   },
-  display: {
-    color: '#fff',
-    fontSize: 60,
-    textAlign: 'right',
-    padding: 10,
+  rightBorder: {
+    width: 20,
+    backgroundColor: '#000',
   },
-  button: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#333',
-    borderWidth: 1,
-    borderColor: '#aaa',
-    paddingVertical: 20,
+  segment: {
+    position: 'absolute',
+    width: 20,
+    height: 20,
+    backgroundColor: 'green',
   },
-  double: {
-    flex: 2,
+  food: {
+    position: 'absolute',
+    width: 20,
+    height: 20,
+    backgroundColor: 'red',
   },
-  buttonText: {
-    color: '#fff',
-    fontSize: 22,
+  gameOverText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginTop: 20,
   },
 });
 
-export default CalculatorApp;
+export default SnakeGame;
